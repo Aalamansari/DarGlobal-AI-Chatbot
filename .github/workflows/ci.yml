@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Build search index
+        run: python -m scripts.build_index
+
+      - name: Run tests
+        run: pytest -v
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t property-assistant .
+
+      - name: Start container and check health
+        run: |
+          docker run -d -p 7860:7860 --name app property-assistant
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:7860/health; then exit 0; fi
+            sleep 3
+          done
+          docker logs app
+          exit 1

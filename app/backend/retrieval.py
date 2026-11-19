@@ -7,7 +7,9 @@ from rank_bm25 import BM25Okapi
 from app.backend import data
 from app.backend.config import EMBED_MODEL, INDEX_DIR
 
-embedder = TextEmbedding(EMBED_MODEL, cache_dir=str(INDEX_DIR / "models"))
+# filled by load() when the app starts
+embedder = None
+bm25 = None
 vectors = None
 
 
@@ -35,18 +37,20 @@ def load_vectors():
     return embed([chunk["text"] for chunk in data.chunks])
 
 
-bm25_docs = []
-for chunk in data.chunks:
-    bm25_docs.append(tokenize(chunk["text"] + " " + (chunk["title"] or "")))
-bm25 = BM25Okapi(bm25_docs)
+def load():
+    global embedder, bm25, vectors
+
+    embedder = TextEmbedding(EMBED_MODEL, cache_dir=str(INDEX_DIR / "models"))
+
+    bm25_docs = []
+    for chunk in data.chunks:
+        bm25_docs.append(tokenize(chunk["text"] + " " + (chunk["title"] or "")))
+    bm25 = BM25Okapi(bm25_docs)
+
+    vectors = load_vectors()
 
 
 def search(query, k=6, sources=None):
-    global vectors
-    
-    if vectors is None:
-        vectors = load_vectors()
-
     allowed = []
     for i, chunk in enumerate(data.chunks):
         if sources is None or chunk["source"] in sources:

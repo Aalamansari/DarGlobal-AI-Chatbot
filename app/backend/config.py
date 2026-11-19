@@ -22,5 +22,10 @@ MODELS = [
 
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 
+# tracing is turned on only when both keys are set
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY", "")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "")
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+
 MAX_STEPS = 6
 REQUESTS_PER_MINUTE = 8

@@ -1,6 +1,5 @@
-from app.backend import data
-
-SYSTEM_PROMPT = f"""You are a property assistant built on public data scraped on {data.snapshot_date} from two sites:
+# {snapshot_date} is filled in by the agent
+SYSTEM_PROMPT = """You are a property assistant built on public data scraped on {snapshot_date} from two sites:
 - Dar Global (darglobal.co.uk): an international luxury real-estate developer (projects in Dubai, London, Oman, Saudi Arabia, Spain, Qatar).
 - Wasalt (wasalt.sa): a Saudi property marketplace with listings for sale and rent.
 

@@ -182,12 +182,23 @@ def create_chunks(listings):
     return chunks
 
 
-# loading everything once when the app starts
-listings = load_listings()
-listings_by_id = {listing["id"]: listing for listing in listings}
-projects = load_json("darglobal_projects.json", [])
-chunks = create_chunks(listings)
-db = create_database(listings)
+# filled by load() when the app starts
+listings = []
+listings_by_id = {}
+projects = []
+chunks = []
+db = None
+snapshot_date = "unknown date"
 
-meta = load_json("meta.json", {})
-snapshot_date = meta.get("collected_on", "unknown date")
+
+def load():
+    global listings, listings_by_id, projects, chunks, db, snapshot_date
+
+    listings = load_listings()
+    listings_by_id = {listing["id"]: listing for listing in listings}
+    projects = load_json("darglobal_projects.json", [])
+    chunks = create_chunks(listings)
+    db = create_database(listings)
+
+    meta = load_json("meta.json", {})
+    snapshot_date = meta.get("collected_on", "unknown date")

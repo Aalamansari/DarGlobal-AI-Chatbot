@@ -40,7 +40,10 @@ main { flex: 1; overflow-y: auto; padding: 24px 16px; }
 .bubble td, .bubble th { border: 1px solid var(--line); padding: 4px 8px; }
 .trace { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
 .trace code { background: var(--soft); padding: 1px 6px; border-radius: 6px; font-size: 12px; word-break: break-word; }
-.meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 10px; }
+.feedback { margin-left: auto; }
+.thumb { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; cursor: pointer; font-size: 13px; margin-left: 4px; }
+.thumb:hover { border-color: var(--accent); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
 .card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--ink); background: var(--bg); }
 .card:hover { border-color: var(--accent); }
@@ -164,6 +167,15 @@ function buildCards(listings) {
   return html;
 }
 
+function sendFeedback(traceId, helpful, container) {
+  container.innerHTML = helpful ? "Thanks!" : "Thanks, noted.";
+  fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trace_id: traceId || null, helpful: helpful })
+  }).catch(() => {});
+}
+
 function showEvent(event, trace, body, question) {
   if (event.type === "tool") {
     const label = toolNames[event.name] || event.name;
@@ -175,7 +187,18 @@ function showEvent(event, trace, body, question) {
     if (event.seconds) footer += " · " + event.seconds + "s";
     if (event.cached) footer += " · cached";
 
-    body.innerHTML = markdownToHtml(event.text) + buildCards(event.cards) + '<div class="meta">' + footer + "</div>";
+    const feedbackButtons =
+      '<span class="feedback">' +
+      '<button class="thumb" data-helpful="true" title="Helpful">👍</button>' +
+      '<button class="thumb" data-helpful="false" title="Not helpful">👎</button>' +
+      "</span>";
+
+    body.innerHTML = markdownToHtml(event.text) + buildCards(event.cards) +
+      '<div class="meta">' + footer + feedbackButtons + "</div>";
+
+    for (const button of body.querySelectorAll(".thumb")) {
+      button.onclick = () => sendFeedback(event.trace_id, button.dataset.helpful === "true", button.parentElement);
+    }
     for (const link of body.querySelectorAll("a")) {
       link.target = "_blank";
       link.rel = "noopener";

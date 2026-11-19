@@ -31,12 +31,15 @@ def find_urls(text):
 
 def remove_unknown_links(answer, allowed_urls):
     # keep markdown links only if the url came from a tool result, otherwise keep just the text
+    removed = []
+
     def check_link(match):
         link_text = match.group(1)
         url = match.group(2).strip()
         if url in allowed_urls:
             return match.group(0)
-        print("Removed unknown link:", url)
+        removed.append(url)
         return link_text
 
-    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", check_link, answer)
+    cleaned = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", check_link, answer)
+    return cleaned, removed
