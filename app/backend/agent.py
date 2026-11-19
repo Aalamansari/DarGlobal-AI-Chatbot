@@ -5,7 +5,8 @@ from openai import OpenAI
 
 from app.backend import data
 from app.backend.config import MAX_STEPS, MODELS, OPENROUTER_API_KEY, OPENROUTER_URL
-from app.backend.prompts import SYSTEM_PROMPT
+from app.backend.guardrails import find_urls, is_blocked, remove_unknown_links
+from app.backend.prompts import REFUSAL_MESSAGE, SYSTEM_PROMPT
 from app.backend.tools import TOOL_SCHEMAS, TOOLS
 
 client = OpenAI(base_url=OPENROUTER_URL, api_key=OPENROUTER_API_KEY, timeout=60, max_retries=0)
@@ -79,6 +80,10 @@ def make_cards(answer, found_listings):
 
 
 def run_agent(history, question):
+    if is_blocked(question):
+        yield {"type": "answer", "text": REFUSAL_MESSAGE, "cards": [], "model": "guardrail", "seconds": 0}
+        return
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     
     for msg in history[-8:]:
@@ -88,6 +93,13 @@ def run_agent(history, question):
 
     found_listings = {}
     start = time.time()
+
+    # links from earlier answers are still fine to use in follow up answers
+    allowed_urls = set()
+    for msg in messages:
+        if msg["role"] == "assistant":
+            for url in find_urls(msg["content"]):
+                allowed_urls.add(url)
 
     for step in range(MAX_STEPS):
         try:
@@ -102,6 +114,7 @@ def run_agent(history, question):
         # no tool calls means the model is giving its final answer
         if not message.tool_calls:
             answer = message.content or "I couldn't produce an answer. Please rephrase."
+            answer = remove_unknown_links(answer, allowed_urls)
             yield {
                 "type": "answer",
                 "text": answer,
@@ -131,6 +144,8 @@ def run_agent(history, question):
             result = run_tool(name, clean_args)
             remember_listings(result, found_listings)
             result_text = json.dumps(result, ensure_ascii=False, default=str)[:6000]
+            for url in find_urls(json.dumps(result, ensure_ascii=False, default=str)):
+                allowed_urls.add(url)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": result_text})
 
     yield {"type": "error", "text": "That needed too many steps. Try a more specific question."}

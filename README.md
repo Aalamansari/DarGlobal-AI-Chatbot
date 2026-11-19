@@ -80,11 +80,20 @@ docker run -p 7860:7860 --env-file .env property-assistant
 
 Without Docker: `pip install -r requirements.txt && python -m scripts.build_index && uvicorn app.backend.main:app --port 7860`
 
+## Guardrails
+
+| Layer | Guardrail |
+|---|---|
+| Input | Questions are limited to 1,000 characters and 8 requests per minute per IP. Common prompt-injection phrases ("ignore previous instructions", "system prompt", "jailbreak"...) are refused before the model is called, which also saves quota. |
+| Prompt | The assistant only helps with real estate, treats tool results and page text as data rather than instructions, refuses to change its rules or reveal its prompt, and never invents facts or URLs. |
+| Tools | Parameterised SQL, an allow-list for `group_by`, results capped at 10, tool errors caught, tool output truncated. |
+| Output | Every markdown link in the answer is checked against the URLs the tools actually returned, and unknown links are reduced to plain text. The UI sanitises the answer's HTML with DOMPurify. |
+| Agent loop | At most 6 tool rounds, limited history, capped answer length, low temperature. |
+| Data | No personal data is stored. |
+
 ## Evaluation
 
-`python eval/run_eval.py [base_url]` runs end-to-end cases. Each one checks that the right tool was chosen and that the expected facts appear in the answer. The cases cover structured search, statistics, Dar Global lookup, an Arabic query and an out-of-scope question (the agent must decline rather than invent an answer).
-
-Current result: **6/6 passing**.
+`python eval/run_eval.py [base_url]` runs end-to-end cases. Each one checks that the right tool was chosen, that the expected facts appear in the answer, and that forbidden content does not. The cases cover structured search, statistics, Dar Global lookup, an Arabic query, and guardrail cases: off-topic requests (weather, coding), a prompt-extraction attempt and a role-change attempt. Run only the guardrail cases with `python eval/run_eval.py http://localhost:7860 guardrails`.
 
 ## Project layout
 
@@ -94,6 +103,7 @@ app/
     main.py        FastAPI: SSE chat endpoint, cache, rate limit
     agent.py       tool-calling loop, model fallback, circuit breaker
     prompts.py     system prompt
+    guardrails.py  input check, link check
     tools.py       5 tools + JSON schemas
     retrieval.py   BM25 + embeddings, reciprocal rank fusion
     data.py        normalisation, SQLite, chunking
@@ -112,5 +122,8 @@ eval/            end-to-end eval
 - A paid or self-hosted model for reliability, streaming tokens, and tracing every tool call (Langfuse/OpenTelemetry)
 - A larger eval set with LLM-as-judge for faithfulness, run in CI
 - Lead capture: hand off to a sales agent or CRM when a user shows buying intent
+- Keep chat history on the server (per session) instead of trusting the history the browser sends, so it can't be faked
+- Rate limit per signed session or with the platform's trusted client IP, since `X-Forwarded-For` can be spoofed
+- An LLM-based classifier for injection and off-topic requests instead of a phrase list, plus a moderation check on outputs
 
 _Built as a technical assignment. Not affiliated with Dar Global or Wasalt; all data is publicly available and may be out of date._
