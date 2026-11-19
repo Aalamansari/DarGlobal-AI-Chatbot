@@ -4,7 +4,9 @@
 
 A tool-using AI agent that answers questions about **Dar Global's international luxury developments** and **Wasalt's Saudi property listings**. It cites a source link for every claim, works in English and Arabic, and runs on free OpenRouter models.
 
-**Live demo:** _<your Space URL>_
+**Live demo:** https://darglobal-property-assistant-hztg.onrender.com/
+
+> Hosted on Render's free plan: if nobody has used it for 15 minutes, the first load takes about a minute while the server wakes up.
 
 Try:
 - *Which Dar Global projects are in Oman?*
