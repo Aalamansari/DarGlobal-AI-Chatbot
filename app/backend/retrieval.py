@@ -19,7 +19,7 @@ def tokenize(text):
 
 
 def embed(texts):
-    result = np.array(list(embedder.embed(texts)), dtype=np.float32)
+    result = np.array(list(embedder.embed(texts, batch_size=16)), dtype=np.float32)
     norms = np.linalg.norm(result, axis=1, keepdims=True)
     
     return result / norms
