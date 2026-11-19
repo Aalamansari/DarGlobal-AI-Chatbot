@@ -26,7 +26,7 @@ async def lifespan(app):
     obs.flush()
 
 
-app = FastAPI(title="Property Assistant", lifespan=lifespan)
+app = FastAPI(title="DarGlobal Property Assistant", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # answers to first questions are cached to save the free model quota

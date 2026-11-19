@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: property-assistant
+    name: darglobal-property-assistant
     runtime: docker
     plan: free
     healthCheckPath: /health

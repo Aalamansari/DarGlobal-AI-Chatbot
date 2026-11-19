@@ -1,4 +1,4 @@
-# Property Assistant: an agentic chatbot over Dar Global & Wasalt data
+# DarGlobal Property Assistant: an agentic chatbot over Dar Global & Wasalt data
 
 [![CI](https://github.com/Aalamansari/DarGlobal-AI-Chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/Aalamansari/DarGlobal-AI-Chatbot/actions/workflows/ci.yml)
 
@@ -77,8 +77,8 @@ Data snapshot: **19 Nov 2026**. Wasalt figures come from a sample and are not ma
 
 ```bash
 cp .env.example .env               # add your OPENROUTER_API_KEY
-docker build -t property-assistant .
-docker run -p 7860:7860 --env-file .env property-assistant
+docker build -t darglobal-property-assistant .
+docker run -p 7860:7860 --env-file .env darglobal-property-assistant
 # open http://localhost:7860
 ```
 

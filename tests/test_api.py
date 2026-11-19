@@ -78,7 +78,7 @@ def test_health_and_stats(client):
 def test_home_page(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "Property Assistant" in response.text
+    assert "DarGlobal Property Assistant" in response.text
 
 
 def test_agent_calls_tool_then_answers(client, monkeypatch):

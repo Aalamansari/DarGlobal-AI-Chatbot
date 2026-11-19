@@ -1,5 +1,5 @@
 [project]
-name = "property-assistant"
+name = "darglobal-property-assistant"
 version = "1.0.0"
 description = "Agentic chatbot over public Dar Global and Wasalt data"
 requires-python = ">=3.11"
