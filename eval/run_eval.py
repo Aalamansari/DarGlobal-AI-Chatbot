@@ -1,58 +1,70 @@
-"""Tiny end-to-end eval: does the agent pick the right tool and ground its answer?
-
-Usage:  python eval/run_eval.py [base_url]      (default http://localhost:7860)
-Each case checks (a) which tools were called and (b) facts that must appear in the answer.
-"""
 import json
 import sys
 import time
 import urllib.request
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:7860"
+# for running the evals do 'python eval/run_eval.py [base_url]'
+if len(sys.argv) > 1:
+    BASE_URL = sys.argv[1]
+else:
+    BASE_URL = "http://localhost:7860"
 
-CASES = [
-    {"q": "Which Dar Global projects are in Qatar?",
-     "tools": ["list_darglobal_projects"], "must": ["Les Vagues"]},
-    {"q": "Show 3-bedroom apartments for sale in Riyadh under 1,000,000 SAR",
-     "tools": ["search_listings"], "must": ["SAR", "wasalt.sa"]},
-    {"q": "Compare median villa sale prices across Saudi cities",
-     "tools": ["market_stats"], "must": ["Riyadh"]},
-    {"q": "Which Dar Global project is a collaboration with Pagani?",
-     "tools": ["list_darglobal_projects", "search_knowledge"], "must": ["Pagani"]},
-    {"q": "أرخص الشقق للإيجار في جدة",
-     "tools": ["search_listings"], "must": ["wasalt.sa"]},
-    {"q": "What's the weather in London tomorrow?",
-     "tools": [], "must": []},  # out of scope: should decline, not invent
+TEST_CASES = [
+    {"question": "Which Dar Global projects are in Qatar?",
+     "tools": ["list_darglobal_projects"], "must_contain": ["Les Vagues"]},
+    {"question": "Show 3-bedroom apartments for sale in Riyadh under 1,000,000 SAR",
+     "tools": ["search_listings"], "must_contain": ["SAR", "wasalt.sa"]},
+    {"question": "Compare median villa sale prices across Saudi cities",
+     "tools": ["market_stats"], "must_contain": ["Riyadh"]},
+    {"question": "Which Dar Global project is a collaboration with Pagani?",
+     "tools": ["list_darglobal_projects", "search_knowledge"], "must_contain": ["Pagani"]},
+    {"question": "أرخص الشقق للإيجار في جدة",
+     "tools": ["search_listings"], "must_contain": ["wasalt.sa"]},
+
+    # out of scope, the bot should say it can't help instead of making something up
+    {"question": "What's the weather in London tomorrow?",
+     "tools": [], "must_contain": []},
 ]
 
 
-def ask(q):
-    req = urllib.request.Request(f"{BASE}/api/chat", data=json.dumps({"message": q}).encode(),
-                                 headers={"Content-Type": "application/json"})
-    tools, answer = [], None
-    with urllib.request.urlopen(req, timeout=180) as r:
-        for line in r:
+def ask(question):
+    body = json.dumps({"message": question}).encode()
+    request = urllib.request.Request(BASE_URL + "/api/chat", data=body,
+                                     headers={"Content-Type": "application/json"})
+    tools_used = []
+    final_event = None
+
+    with urllib.request.urlopen(request, timeout=180) as response:
+        for line in response:
             line = line.decode().strip()
             if not line.startswith("data:"):
                 continue
-            ev = json.loads(line[5:])
-            if ev["type"] == "tool":
-                tools.append(ev["name"])
-            elif ev["type"] in ("answer", "error"):
-                answer = ev
-    return tools, answer
+            event = json.loads(line[5:])
+            if event["type"] == "tool":
+                tools_used.append(event["name"])
+            if event["type"] in ["answer", "error"]:
+                final_event = event
+
+    return tools_used, final_event
 
 
 passed = 0
-for c in CASES:
-    t0 = time.time()
-    tools, ans = ask(c["q"])
-    text = (ans or {}).get("text", "")
-    ok_tool = not c["tools"] or any(t in tools for t in c["tools"])
-    ok_facts = all(m.lower() in text.lower() for m in c["must"])
-    ok = ans and ans["type"] == "answer" and ok_tool and ok_facts
-    passed += bool(ok)
-    print(f"{'PASS' if ok else 'FAIL'}  {time.time()-t0:5.1f}s  tools={tools}  model={ans.get('model') if ans else None}")
-    print(f"      Q: {c['q']}\n      A: {text[:160].replace(chr(10), ' ')}…\n")
+for case in TEST_CASES:
+    start = time.time()
+    tools_used, event = ask(case["question"])
+    answer = event["text"] if event else ""
+
+    right_tool = len(case["tools"]) == 0 or any(tool in tools_used for tool in case["tools"])
+    has_facts = all(word.lower() in answer.lower() for word in case["must_contain"])
+    ok = event is not None and event["type"] == "answer" and right_tool and has_facts
+
+    if ok:
+        passed += 1
+    status = "PASS" if ok else "FAIL"
+    model = event.get("model") if event else None
+    print(f"{status}  {time.time() - start:.1f}s  tools={tools_used}  model={model}")
+    print("   Q:", case["question"])
+    print("   A:", answer[:160].replace("\n", " "), "\n")
     time.sleep(3)
-print(f"{passed}/{len(CASES)} passed")
+
+print(f"{passed}/{len(TEST_CASES)} passed")

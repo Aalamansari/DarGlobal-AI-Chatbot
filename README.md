@@ -78,7 +78,7 @@ docker run -p 7860:7860 --env-file .env property-assistant
 # open http://localhost:7860
 ```
 
-Without Docker: `pip install -r requirements.txt && python scripts/build_index.py && uvicorn app.main:app --port 7860`
+Without Docker: `pip install -r requirements.txt && python -m scripts.build_index && uvicorn app.backend.main:app --port 7860`
 
 ## Evaluation
 
@@ -90,14 +90,18 @@ Current result: **6/6 passing**.
 
 ```
 app/
-  agent.py       tool-calling loop, model fallback, circuit breaker
-  tools.py       5 tools + JSON schemas
-  retrieval.py   BM25 + embeddings, reciprocal rank fusion
-  data.py        normalisation, SQLite, chunking
-  main.py        FastAPI: SSE chat endpoint, cache, rate limit
-  static/        single-file chat UI
+  backend/
+    main.py        FastAPI: SSE chat endpoint, cache, rate limit
+    agent.py       tool-calling loop, model fallback, circuit breaker
+    prompts.py     system prompt
+    tools.py       5 tools + JSON schemas
+    retrieval.py   BM25 + embeddings, reciprocal rank fusion
+    data.py        normalisation, SQLite, chunking
+    config.py      settings and paths
+  web/
+    static/        single-file chat UI
 data/raw/        scraped snapshot (JSON)
-scripts/         build_index.py (runs at docker build)
+scripts/         build_index.py (runs during docker build)
 eval/            end-to-end eval
 ```
 
